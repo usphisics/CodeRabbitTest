@@ -82,7 +82,8 @@ public record AuctionCandidate(
         return new AuctionCandidate(
                 bid.adId() != null ? bid.adId() : bid.id(),
                 bid.adm(),
-                bid.price(),
+                // Coalesce null price to 0.0 to avoid NPE when unboxing a null Double
+                bid.price() != null ? bid.price() : 0.0,
                 bid.adomain(),
                 bid.crid(),
                 bid.cat(),
