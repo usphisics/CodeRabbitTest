@@ -1,3 +1,4 @@
-com/ortb/service/AuctionServiceTest.class
+com/ortb/service/DspClientServiceTest.class
 com/ortb/controller/BidControllerIntegrationTest.class
+com/ortb/service/AuctionServiceTest.class
 com/ortb/service/TargetingServiceTest.class

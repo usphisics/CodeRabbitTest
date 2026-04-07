@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.ortb.service.AuctionServiceTest" time="0.017" tests="7" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.ortb.service.DspClientServiceTest" time="0.085" tests="8" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="25"/>
     <property name="sun.jnu.encoding" value="UTF-8"/>
@@ -64,40 +64,34 @@
     <property name="sun.io.unicode.encoding" value="UnicodeBig"/>
     <property name="java.class.version" value="69.0"/>
   </properties>
-  <testcase name="firstPriceAuction" classname="com.ortb.service.AuctionServiceTest" time="0.008">
-    <system-out><![CDATA[2026-04-07T14:14:45.351-05:00  INFO 35751 --- [           main] com.ortb.service.AuctionService          : Processing bid request id=req-fp impressions=1
-2026-04-07T14:14:45.351-05:00  INFO 35751 --- [           main] com.ortb.service.AuctionService          : Auction winner for imp=imp1: adId=ad-high source=local bidPrice=5.0 clearingPrice=5.0
+  <testcase name="returnsEmptyWhenDspNoBid" classname="com.ortb.service.DspClientServiceTest" time="0.029">
+    <system-out><![CDATA[2026-04-07T14:14:45.285-05:00  INFO 35751 --- [           main] com.ortb.service.DspClientService        : External DSPs contributed 0 total candidates for request id=req-1
 ]]></system-out>
   </testcase>
-  <testcase name="highestPriceWins" classname="com.ortb.service.AuctionServiceTest" time="0.001">
-    <system-out><![CDATA[2026-04-07T14:14:45.353-05:00  INFO 35751 --- [           main] com.ortb.service.AuctionService          : Processing bid request id=req-test impressions=1
-2026-04-07T14:14:45.353-05:00  INFO 35751 --- [           main] com.ortb.service.AuctionService          : Auction winner for imp=imp1: adId=ad-7 source=local bidPrice=7.0 clearingPrice=7.0
+  <testcase name="returnsCandidatesFromSuccessfulDsp" classname="com.ortb.service.DspClientServiceTest" time="0.011">
+    <system-out><![CDATA[2026-04-07T14:14:45.296-05:00  INFO 35751 --- [           main] com.ortb.service.DspClientService        : External DSPs contributed 1 total candidates for request id=req-1
 ]]></system-out>
   </testcase>
-  <testcase name="multipleImpressionsGetSeparateBids" classname="com.ortb.service.AuctionServiceTest" time="0.001">
-    <system-out><![CDATA[2026-04-07T14:14:45.354-05:00  INFO 35751 --- [           main] com.ortb.service.AuctionService          : Processing bid request id=req-multi impressions=2
-2026-04-07T14:14:45.355-05:00  INFO 35751 --- [           main] com.ortb.service.AuctionService          : Auction winner for imp=imp1: adId=ad-300 source=local bidPrice=3.0 clearingPrice=3.0
-2026-04-07T14:14:45.355-05:00  INFO 35751 --- [           main] com.ortb.service.AuctionService          : Auction winner for imp=imp2: adId=ad-728 source=local bidPrice=4.0 clearingPrice=4.0
+  <testcase name="discardsBidBelowFloorPrice" classname="com.ortb.service.DspClientServiceTest" time="0.008">
+    <system-out><![CDATA[2026-04-07T14:14:45.305-05:00  INFO 35751 --- [           main] com.ortb.service.DspClientService        : External DSPs contributed 0 total candidates for request id=req-1
 ]]></system-out>
   </testcase>
-  <testcase name="secondPriceAuction" classname="com.ortb.service.AuctionServiceTest" time="0.001">
-    <system-out><![CDATA[2026-04-07T14:14:45.356-05:00  INFO 35751 --- [           main] com.ortb.service.AuctionService          : Processing bid request id=req-sp impressions=1
-2026-04-07T14:14:45.356-05:00  INFO 35751 --- [           main] com.ortb.service.AuctionService          : Auction winner for imp=imp1: adId=ad-high source=local bidPrice=5.0 clearingPrice=2.01
+  <testcase name="returnsEmptyOnDspServerError" classname="com.ortb.service.DspClientServiceTest" time="0.009">
+    <system-out><![CDATA[2026-04-07T14:14:45.315-05:00  WARN 35751 --- [               ] com.ortb.service.DspClientService        : HTTP error calling DSP test-dsp: 500 Internal Server Error: [no body]
+2026-04-07T14:14:45.315-05:00  INFO 35751 --- [           main] com.ortb.service.DspClientService        : External DSPs contributed 0 total candidates for request id=req-1
 ]]></system-out>
   </testcase>
-  <testcase name="noBidWhenEmpty" classname="com.ortb.service.AuctionServiceTest" time="0.001">
-    <system-out><![CDATA[2026-04-07T14:14:45.357-05:00  INFO 35751 --- [           main] com.ortb.service.AuctionService          : Processing bid request id=req-test impressions=1
-2026-04-07T14:14:45.358-05:00  INFO 35751 --- [           main] com.ortb.service.AuctionService          : No-bid for request id=req-test
+  <testcase name="multipleValidBidsReturnedFromOneDsp" classname="com.ortb.service.DspClientServiceTest" time="0.009">
+    <system-out><![CDATA[2026-04-07T14:14:45.323-05:00  INFO 35751 --- [           main] com.ortb.service.DspClientService        : External DSPs contributed 2 total candidates for request id=req-1
 ]]></system-out>
   </testcase>
-  <testcase name="adBelowFloorExcluded" classname="com.ortb.service.AuctionServiceTest" time="0.001">
-    <system-out><![CDATA[2026-04-07T14:14:45.358-05:00  INFO 35751 --- [           main] com.ortb.service.AuctionService          : Processing bid request id=req-floor impressions=1
-2026-04-07T14:14:45.359-05:00  INFO 35751 --- [           main] com.ortb.service.AuctionService          : Auction winner for imp=imp1: adId=ad-ok source=local bidPrice=2.0 clearingPrice=2.0
+  <testcase name="discardsUnknownImpId" classname="com.ortb.service.DspClientServiceTest" time="0.007">
+    <system-out><![CDATA[2026-04-07T14:14:45.332-05:00  INFO 35751 --- [           main] com.ortb.service.DspClientService        : External DSPs contributed 0 total candidates for request id=req-1
 ]]></system-out>
   </testcase>
-  <testcase name="returnsWinningBid" classname="com.ortb.service.AuctionServiceTest" time="0.001">
-    <system-out><![CDATA[2026-04-07T14:14:45.360-05:00  INFO 35751 --- [           main] com.ortb.service.AuctionService          : Processing bid request id=req-test impressions=1
-2026-04-07T14:14:45.360-05:00  INFO 35751 --- [           main] com.ortb.service.AuctionService          : Auction winner for imp=imp1: adId=ad-1 source=local bidPrice=3.0 clearingPrice=3.0
+  <testcase name="discardsBlockedAdvertiserBid" classname="com.ortb.service.DspClientServiceTest" time="0.007">
+    <system-out><![CDATA[2026-04-07T14:14:45.340-05:00  INFO 35751 --- [           main] com.ortb.service.DspClientService        : External DSPs contributed 0 total candidates for request id=req-1
 ]]></system-out>
   </testcase>
+  <testcase name="returnsEmptyWhenNoDspsConfigured" classname="com.ortb.service.DspClientServiceTest" time="0.001"/>
 </testsuite>

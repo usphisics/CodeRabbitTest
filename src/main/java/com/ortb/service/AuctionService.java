@@ -1,26 +1,30 @@
 package com.ortb.service;
 
-import com.ortb.model.ad.Ad;
+import com.ortb.model.auction.AuctionCandidate;
 import com.ortb.model.openrtb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 /**
- * Runs the auction for a given BidRequest.
+ * Unified auction engine.
  *
- * Auction types (BidRequest.at):
- *  1 = First-price sealed bid  → winner pays their own bid price
- *  2 = Second-price plus       → winner pays second-highest price + $0.01
- *
- * For each impression in the request:
- *  1. Gather all ads from inventory
- *  2. Filter via TargetingService
- *  3. Sort eligible ads by price (descending)
- *  4. Apply auction pricing rule
- *  5. Build Bid object for the winner
+ * <p>For each impression in the incoming {@link BidRequest}:
+ * <ol>
+ *   <li>Gathers local ad candidates from the inventory (filtered by {@link TargetingService}).</li>
+ *   <li>Gathers external candidates from all configured DSPs via {@link DspClientService}
+ *       (DSP calls happen in parallel before this method is invoked; results are passed in).</li>
+ *   <li>Merges all candidates, sorts by CPM price descending.</li>
+ *   <li>Applies the auction pricing rule:</li>
+ *   <ul>
+ *     <li>{@code at=1} First-price: winner pays its own bid.</li>
+ *     <li>{@code at=2} Second-price plus: winner pays second-highest price + $0.01.</li>
+ *   </ul>
+ *   <li>Returns a {@link BidResponse} containing the winning {@link Bid} per impression.</li>
+ * </ol>
  */
 @Service
 public class AuctionService {
@@ -29,23 +33,31 @@ public class AuctionService {
 
     private final AdInventoryService inventoryService;
     private final TargetingService targetingService;
+    private final DspClientService dspClientService;
 
-    public AuctionService(AdInventoryService inventoryService, TargetingService targetingService) {
+    public AuctionService(
+            AdInventoryService inventoryService,
+            TargetingService targetingService,
+            DspClientService dspClientService) {
         this.inventoryService = inventoryService;
         this.targetingService = targetingService;
+        this.dspClientService = dspClientService;
     }
 
     /**
-     * Processes the BidRequest and returns a BidResponse.
-     * Returns a no-bid response (empty seatbid) when no eligible ads are found.
+     * Main entry point. Processes the bid request, runs the auction for each
+     * impression, and returns the final bid response.
      */
     public BidResponse process(BidRequest request) {
         log.info("Processing bid request id={} impressions={}", request.id(), request.imp().size());
 
+        // Fetch external DSP bids once for the whole request (parallel calls inside)
+        List<AuctionCandidate> externalCandidates = dspClientService.fetchExternalCandidates(request);
+
         List<Bid> winningBids = new ArrayList<>();
 
         for (Imp imp : request.imp()) {
-            runAuctionForImpression(imp, request)
+            runAuctionForImpression(imp, request, externalCandidates)
                     .ifPresent(winningBids::add);
         }
 
@@ -54,66 +66,66 @@ public class AuctionService {
             return BidResponse.noBid(request.id(), 0);
         }
 
-        SeatBid seatBid = SeatBid.of(winningBids);
-        return BidResponse.withBids(request.id(), List.of(seatBid));
+        return BidResponse.withBids(request.id(), List.of(SeatBid.of(winningBids)));
     }
 
     // -------------------------------------------------------------------------
+    // Per-impression auction
+    // -------------------------------------------------------------------------
 
-    private Optional<Bid> runAuctionForImpression(Imp imp, BidRequest request) {
-        // Gather eligible ads
-        List<Ad> eligible = inventoryService.getAllAds().stream()
+    private Optional<Bid> runAuctionForImpression(
+            Imp imp, BidRequest request, List<AuctionCandidate> externalCandidates) {
+
+        // Local candidates
+        List<AuctionCandidate> local = inventoryService.getAllAds().stream()
                 .filter(ad -> targetingService.isEligible(ad, imp, request))
-                .sorted(Comparator.comparingDouble(Ad::price).reversed())
+                .map(ad -> AuctionCandidate.fromLocalAd(ad, imp.id()))
                 .toList();
 
-        if (eligible.isEmpty()) {
-            log.debug("No eligible ads for impression id={}", imp.id());
+        // External candidates matching this impression
+        List<AuctionCandidate> external = externalCandidates.stream()
+                .filter(c -> imp.id().equals(c.impId()))
+                .toList();
+
+        // Merge and sort by price descending
+        List<AuctionCandidate> allCandidates = Stream.concat(local.stream(), external.stream())
+                .sorted(Comparator.comparingDouble(AuctionCandidate::price).reversed())
+                .toList();
+
+        if (allCandidates.isEmpty()) {
+            log.debug("No eligible candidates for impression id={}", imp.id());
             return Optional.empty();
         }
 
-        Ad winner = eligible.getFirst();
-        double clearingPrice = computeClearingPrice(winner, eligible, request.at());
+        AuctionCandidate winner = allCandidates.getFirst();
+        double clearingPrice = computeClearingPrice(winner, allCandidates, request.at());
 
-        log.info("Auction winner for imp={}: adId={} price={} clearingPrice={}",
-                imp.id(), winner.id(), winner.price(), clearingPrice);
+        log.info("Auction winner for imp={}: adId={} source={} bidPrice={} clearingPrice={}",
+                imp.id(), winner.adId(), winner.source(), winner.price(), clearingPrice);
 
-        return Optional.of(buildBid(winner, imp.id(), clearingPrice));
+        return Optional.of(winner.toBid(clearingPrice));
     }
+
+    // -------------------------------------------------------------------------
+    // Pricing
+    // -------------------------------------------------------------------------
 
     /**
-     * Compute the actual clearing price based on auction type.
-     *  at=1 (first-price): pay own bid
-     *  at=2 (second-price+): pay second-highest + $0.01
+     * Determines the actual clearing price based on auction type.
+     * <ul>
+     *   <li>{@code at=1} First-price → winner pays own bid.</li>
+     *   <li>{@code at=2} Second-price plus → winner pays second-highest + $0.01;
+     *       if only one bidder, pays own price.</li>
+     * </ul>
      */
-    private double computeClearingPrice(Ad winner, List<Ad> sorted, Integer auctionType) {
+    private double computeClearingPrice(
+            AuctionCandidate winner, List<AuctionCandidate> sorted, Integer auctionType) {
+
         int at = (auctionType == null) ? 1 : auctionType;
         return switch (at) {
-            case 2 -> {
-                // Second-price plus
-                if (sorted.size() > 1) {
-                    yield round2(sorted.get(1).price() + 0.01);
-                }
-                yield winner.price(); // only one bidder → pays own price
-            }
-            default -> winner.price(); // First-price
+            case 2 -> sorted.size() > 1 ? round2(sorted.get(1).price() + 0.01) : winner.price();
+            default -> winner.price(); // first-price
         };
-    }
-
-    private Bid buildBid(Ad ad, String impId, double clearingPrice) {
-        return Bid.builder()
-                .id(UUID.randomUUID().toString())
-                .impId(impId)
-                .price(clearingPrice)
-                .adId(ad.id())
-                .adm(ad.adm())
-                .nurl(ad.nurl())
-                .adomain(ad.adomain())
-                .crid(ad.crid())
-                .cat(ad.cat())
-                .w(ad.w())
-                .h(ad.h())
-                .build();
     }
 
     private double round2(double value) {

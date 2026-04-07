@@ -3,6 +3,7 @@ package com.ortb.service;
 import com.ortb.model.ad.Ad;
 import com.ortb.model.ad.AdFormat;
 import com.ortb.model.ad.Targeting;
+import com.ortb.model.openrtb.Bid;
 import com.ortb.model.openrtb.BidRequest;
 import com.ortb.model.openrtb.Device;
 import com.ortb.model.openrtb.Geo;
@@ -226,5 +227,64 @@ public class TargetingService {
             return request.user().keywords();
         }
         return null;
+    }
+
+    // -------------------------------------------------------------------------
+    // External DSP bid validation
+    // -------------------------------------------------------------------------
+
+    /**
+     * Validates a bid returned by an external DSP before it enters the auction.
+     * External DSPs handle their own targeting; we only enforce the publisher-side
+     * constraints that are non-negotiable from our perspective:
+     * <ol>
+     *   <li>Price must be positive</li>
+     *   <li>impId must be present</li>
+     *   <li>Price must meet the impression bid floor</li>
+     *   <li>Ad categories must not appear in the request's blocked-category list</li>
+     *   <li>Advertiser domains must not appear in the request's blocked-advertiser list</li>
+     * </ol>
+     */
+    public boolean isExternalBidEligible(Bid bid, Imp imp, BidRequest request) {
+        if (bid.price() == null || bid.price() <= 0) {
+            log.debug("External bid {} rejected: invalid price {}", bid.id(), bid.price());
+            return false;
+        }
+        if (bid.impId() == null || bid.impId().isBlank()) {
+            log.debug("External bid {} rejected: missing impId", bid.id());
+            return false;
+        }
+        if (!meetsFloorPrice(bid.price(), imp)) {
+            log.debug("External bid {} rejected: price {} below floor {}", bid.id(), bid.price(), imp.bidFloor());
+            return false;
+        }
+        if (!passesBlockedCategoriesForBid(bid, request)) {
+            log.debug("External bid {} rejected: blocked category", bid.id());
+            return false;
+        }
+        if (!passesBlockedAdvertisersForBid(bid, request)) {
+            log.debug("External bid {} rejected: blocked advertiser", bid.id());
+            return false;
+        }
+        return true;
+    }
+
+    private boolean meetsFloorPrice(double price, Imp imp) {
+        if (imp.bidFloor() == null || imp.bidFloor() <= 0) return true;
+        return price >= imp.bidFloor();
+    }
+
+    private boolean passesBlockedCategoriesForBid(Bid bid, BidRequest request) {
+        if (request.bcat() == null || request.bcat().isEmpty()) return true;
+        if (bid.cat() == null || bid.cat().isEmpty()) return true;
+        Set<String> blocked = Set.copyOf(request.bcat());
+        return bid.cat().stream().noneMatch(blocked::contains);
+    }
+
+    private boolean passesBlockedAdvertisersForBid(Bid bid, BidRequest request) {
+        if (request.badv() == null || request.badv().isEmpty()) return true;
+        if (bid.adomain() == null || bid.adomain().isEmpty()) return true;
+        Set<String> blocked = Set.copyOf(request.badv());
+        return bid.adomain().stream().noneMatch(blocked::contains);
     }
 }
