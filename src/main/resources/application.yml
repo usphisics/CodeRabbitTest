@@ -1,0 +1,18 @@
+server:
+  port: 8080
+
+spring:
+  threads:
+    virtual:
+      enabled: true  # Enable Project Loom virtual threads (Java 21)
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
+ortb:
+  auction:
+    default-currency: USD
+    timeout-ms: 100  # Max auction duration in ms
+  logging:
+    log-no-bid: true
