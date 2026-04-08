@@ -3,7 +3,12 @@ package com.ortb.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ortb.config.DspProperties;
 import com.ortb.model.auction.AuctionCandidate;
-import com.ortb.model.openrtb.*;
+import com.ortb.model.openrtb.Banner;
+import com.ortb.model.openrtb.Bid;
+import com.ortb.model.openrtb.BidRequest;
+import com.ortb.model.openrtb.BidResponse;
+import com.ortb.model.openrtb.Imp;
+import com.ortb.model.openrtb.SeatBid;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,8 +22,11 @@ import java.util.UUID;
 import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 class DspClientServiceTest {
 

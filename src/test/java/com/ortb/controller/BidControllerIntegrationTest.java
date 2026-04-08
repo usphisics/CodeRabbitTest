@@ -2,7 +2,14 @@ package com.ortb.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ortb.model.auction.AuctionCandidate;
-import com.ortb.model.openrtb.*;
+import com.ortb.model.openrtb.Banner;
+import com.ortb.model.openrtb.Bid;
+import com.ortb.model.openrtb.BidRequest;
+import com.ortb.model.openrtb.BidResponse;
+import com.ortb.model.openrtb.Device;
+import com.ortb.model.openrtb.Geo;
+import com.ortb.model.openrtb.Imp;
+import com.ortb.model.openrtb.Site;
 import com.ortb.service.DspClientService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,7 +23,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.List;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;

@@ -16,8 +16,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 /**
@@ -153,8 +161,9 @@ public class DspClientService {
         }
 
         // Build a quick lookup: impId → Imp for validation
+        // Use merge function to gracefully handle duplicate impIds instead of throwing IllegalStateException
         Map<String, Imp> impMap = request.imp().stream()
-                .collect(Collectors.toMap(Imp::id, imp -> imp));
+                .collect(Collectors.toMap(Imp::id, imp -> imp, (existing, replacement) -> existing));
 
         List<AuctionCandidate> candidates = new ArrayList<>();
 

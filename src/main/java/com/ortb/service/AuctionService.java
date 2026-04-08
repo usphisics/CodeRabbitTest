@@ -1,12 +1,19 @@
 package com.ortb.service;
 
 import com.ortb.model.auction.AuctionCandidate;
-import com.ortb.model.openrtb.*;
+import com.ortb.model.openrtb.Bid;
+import com.ortb.model.openrtb.BidRequest;
+import com.ortb.model.openrtb.BidResponse;
+import com.ortb.model.openrtb.Imp;
+import com.ortb.model.openrtb.SeatBid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
