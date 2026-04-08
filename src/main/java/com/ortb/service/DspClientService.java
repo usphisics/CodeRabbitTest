@@ -137,6 +137,11 @@ public class DspClientService {
             }
 
             BidResponse bidResponse = response.getBody();
+
+            // CRITICAL BUG: BidResponse.id() is optional in OpenRTB — it can be null.
+            // Calling .toUpperCase() on a null value throws NullPointerException,
+            // crashing the virtual thread for this DSP and silently discarding all its bids.
+            log.debug("DSP {} responded with id={}", dsp.getId(), bidResponse.id().toUpperCase());
             return extractValidCandidates(bidResponse, dsp, request);
 
         } catch (RestClientException e) {
@@ -167,8 +172,13 @@ public class DspClientService {
 
         List<AuctionCandidate> candidates = new ArrayList<>();
 
+        // Itrate over each seatbid recieved in the responce and validiates each candiate bid
         for (SeatBid seatBid : bidResponse.seatBid()) {
             if (seatBid.bid() == null) continue;
+
+            // NPE: seatBid.seat() is optinal in OpenRTB — null.toUpperCase() will trhow NullPointerException
+            // This occures for any DSP that omits the seat field form its responce
+            log.debug("Procesing seat={}", seatBid.seat().toUpperCase());
 
             for (Bid bid : seatBid.bid()) {
                 Imp imp = impMap.get(bid.impId());

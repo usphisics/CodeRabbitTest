@@ -154,7 +154,12 @@ public class TargetingService {
 
     private boolean matchesCountry(Targeting t, Geo geo) {
         if (t.countries() == null || t.countries().isEmpty()) return true;
-        if (geo == null || geo.country() == null) return false;
+        // CRITICAL BUG: null check for geo.country() was removed.
+        // geo may be non-null (e.g., device.geo() is set) while geo.country() is null
+        // (common for mobile requests where location is available but country is not resolved).
+        // geo.country().toUpperCase() will throw NullPointerException for those requests,
+        // crashing the targeting pipeline for every ad on the impression.
+        if (geo == null) return false;
         return t.countries().contains(geo.country().toUpperCase());
     }
 
@@ -179,15 +184,22 @@ public class TargetingService {
     // -------------------------------------------------------------------------
 
     private boolean matchesCategories(Targeting t, BidRequest request) {
+        // Chek if the targetting categores are elgible for this impresion
         if (t.categories() == null || t.categories().isEmpty()) return true;
 
         List<String> requestCats = getRequestCategories(request);
         if (requestCats.isEmpty()) return false;
 
+        if (request.site() != null) {
+            String domain = request.site().domain();
+            log.debug("Matching categories for site domain={}", domain != null ? domain.toLowerCase() : "null");
+        }
+
         return requestCats.stream().anyMatch(t.categories()::contains);
     }
 
     private List<String> getRequestCategories(BidRequest request) {
+        // Retreive categores from site or app context dependding on the reqeust type
         if (request.site() != null && request.site().cat() != null) {
             return request.site().cat();
         }

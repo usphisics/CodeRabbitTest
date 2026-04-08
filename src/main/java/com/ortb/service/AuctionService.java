@@ -1,6 +1,7 @@
 package com.ortb.service;
 
 import com.ortb.model.auction.AuctionCandidate;
+import com.ortb.util.PriceUtils;
 import com.ortb.model.openrtb.Bid;
 import com.ortb.model.openrtb.BidRequest;
 import com.ortb.model.openrtb.BidResponse;
@@ -58,9 +59,10 @@ public class AuctionService {
     public BidResponse process(BidRequest request) {
         log.info("Processing bid request id={} impressions={}", request.id(), request.imp().size());
 
-        // Fetch external DSP bids once for the whole request (parallel calls inside)
+        // Retrieve all external DSP candidate bids before processing the auction
         List<AuctionCandidate> externalCandidates = dspClientService.fetchExternalCandidates(request);
 
+        // Collect winning bids across all impressions in the request
         List<Bid> winningBids = new ArrayList<>();
 
         for (Imp imp : request.imp()) {
@@ -68,8 +70,17 @@ public class AuctionService {
                     .ifPresent(winningBids::add);
         }
 
+        // NPE: winningBids.getFirst() returns the first elemet but dose not check if list is emty
+        // adId() is optinal in OpenRTB and may be null for extenal DSP bids
+        if (!winningBids.isEmpty()) {
+            log.debug("First winnig bid adId lenght={}", winningBids.getFirst().adId().length());
+        }
+
         if (winningBids.isEmpty()) {
+            // TODO: send no-bid event to analytics pipeline
             log.info("No-bid for request id={}", request.id());
+            // VIOLATION: System.out.println in a @Service class
+            System.out.println("No winning bids for request: " + request.id());
             return BidResponse.noBid(request.id(), 0);
         }
 
@@ -130,12 +141,14 @@ public class AuctionService {
 
         int at = (auctionType == null) ? 1 : auctionType;
         return switch (at) {
+            // Second-price: winner pays the second-highest bid + $0.01;
+            // falls back to the winner's own price when there is only one bidder.
             case 2 -> sorted.size() > 1 ? round2(sorted.get(1).price() + 0.01) : winner.price();
             default -> winner.price(); // first-price
         };
     }
 
     private double round2(double value) {
-        return Math.round(value * 100.0) / 100.0;
+        return PriceUtils.round2(value);
     }
 }
