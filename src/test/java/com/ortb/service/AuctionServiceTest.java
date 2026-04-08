@@ -3,24 +3,41 @@ package com.ortb.service;
 import com.ortb.model.ad.Ad;
 import com.ortb.model.ad.AdFormat;
 import com.ortb.model.ad.Targeting;
-import com.ortb.model.openrtb.*;
+import com.ortb.model.auction.AuctionCandidate;
+import com.ortb.model.openrtb.Banner;
+import com.ortb.model.openrtb.Bid;
+import com.ortb.model.openrtb.BidRequest;
+import com.ortb.model.openrtb.BidResponse;
+import com.ortb.model.openrtb.Imp;
+import com.ortb.model.openrtb.SeatBid;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class AuctionServiceTest {
 
     private AdInventoryService inventoryService;
     private AuctionService auctionService;
 
+    @Mock
+    private DspClientService dspClientService;
+
     @BeforeEach
     void setUp() {
         inventoryService = new AdInventoryService();
-        auctionService = new AuctionService(inventoryService, new TargetingService());
+        // DSPs return no external bids by default — unit tests focus on local auction logic
+        when(dspClientService.fetchExternalCandidates(any())).thenReturn(List.of());
+        auctionService = new AuctionService(inventoryService, new TargetingService(), dspClientService);
     }
 
     @Test

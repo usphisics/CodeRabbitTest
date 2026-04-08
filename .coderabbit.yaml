@@ -1,0 +1,301 @@
+# .coderabbit.yaml - AdServer
+# Code review configuration for NativoPlatform/AdServer
+
+language: "en-US"
+tone_instructions: "Be direct and specific. Reference exact line numbers and variable names. Do not soften findings."
+early_access: false
+enable_free_tier: true
+
+reviews:
+  profile: "assertive"
+  request_changes_workflow: true
+  high_level_summary: true
+  high_level_summary_placeholder: "@coderabbitai summary"
+  high_level_summary_in_walkthrough: false
+  auto_title_placeholder: "@coderabbitai"
+  review_status: true
+  commit_status: true
+  fail_commit_status: false
+  collapse_walkthrough: false
+  changed_files_summary: true
+  sequence_diagrams: true
+  estimate_code_review_effort: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  suggested_labels: true
+  auto_apply_labels: false
+  suggested_reviewers: true
+  auto_assign_reviewers: false
+  poem: false
+  abort_on_close: true
+  disable_cache: false
+
+  path_filters:
+    - "!**/target/**"
+    - "!**/*.class"
+    - "!**/*.jar"
+    - "!**/*.war"
+
+  slop_detection:
+    enabled: true
+    label: "slop"
+
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 5
+    ignore_title_keywords:
+      - "WIP"
+      - "DO NOT MERGE"
+    drafts: false
+    base_branches:
+      - "main"
+      - "master"
+      - "develop"
+
+  path_instructions:
+    # ─────────────────────────────────────────────────────────────────────────
+    # ALL JAVA FILES
+    # ─────────────────────────────────────────────────────────────────────────
+    - path: "**/*.java"
+      instructions: |
+        Apply all of the following rules to every Java file in this review.
+
+        NAMING CONVENTIONS:
+        - Classes and enums: PascalCase (e.g., AdServingAPI, RTBRequestService).
+        - Methods and fields: camelCase (e.g., getRequest, isVideoRequest).
+        - Constants: UPPER_SNAKE_CASE (e.g., PRIMARY_IMP_BUCKETS, STUCK_CHECKER_LOCK).
+        - Enum values: UPPER_SNAKE_CASE (e.g., NATIVE_ARTICLE, VIDEO_ONLY).
+        - Packages: all lowercase dot-separated (e.g., net.nativo.adserver.services).
+        - Interfaces: PascalCase, no mandatory prefix/suffix, but existing I-prefix or -Interface suffix patterns are acceptable if consistent with the file's neighbors.
+        - Flag any name that is misleading, does not match its purpose, or references the wrong component.
+
+        CODE STYLE:
+        - No wildcard imports (import java.util.* is forbidden). Each import must be explicit.
+        - No commented-out code blocks. Flag for removal; git history preserves removed code.
+        - Use {@code value} in Javadoc, not <code>value</code> or backticks.
+        - Indentation must use tabs (defined in .editorconfig). Flag spaces-as-indentation.
+        - Classes must not exceed 500 lines. Flag any class over the limit and suggest how to split it into smaller, focused classes.
+        - Fix typos and grammar issues in comments, Javadoc, string literals, and log messages.
+
+        LOGGING:
+        - No System.out.println anywhere, except in classes named ApplicationInitializer, BackgroundServiceUtil, or Factory.
+        - No e.printStackTrace() or Throwable.printStackTrace() calls. Use the Log4j 2 logger instead (LogManager.getLogger or the project's LogUtil wrapper).
+        - Verify that new loggers use LogManager.getLogger and are not using legacy java.util.logging or System.err.
+
+        NULL SAFETY AND OPTIONAL:
+        - Prefer Optional over explicit null checks. Replace verbose if (x != null) chains with Optional.ofNullable(x).map(...).orElse(...) where it improves readability.
+        - Flag chained method calls without null guards (e.g., a.getB().getC().getValue()).
+        - Flag auto-unboxing of potentially null wrapper types (Integer, Long, Boolean, Double). Suggest explicit null check or Optional.
+        - Flag .get(0) or .get(index) on lists without an emptiness or bounds check.
+        - Flag Long.getLong() usage — it reads system properties, not parses strings. Use Long.parseLong() or Long.valueOf() instead.
+
+        CONCURRENCY AND THREAD SAFETY:
+        - Flag mutable instance fields on singleton-scoped classes (filters, services, factories) that are set on one thread and read on another without synchronization.
+        - Flag non-atomic read-modify-write sequences on shared state (e.g., map.clear() followed by map.putAll() instead of an atomic reference swap).
+        - Flag missing volatile, synchronized, or AtomicReference where concurrent access is possible.
+
+        LOGIC AND CORRECTNESS:
+        - Flag == for String or boxed-type comparison. Use .equals() or Objects.equals().
+        - Flag operator precedence issues where & or | is mixed with && or || without explicit parentheses.
+        - Flag catch blocks that silently swallow exceptions (empty body or body with only a comment).
+        - Flag return where continue was intended inside loops, and vice versa.
+
+        PERFORMANCE AND READABILITY:
+        - Flag sets or lists rebuilt inside stream filter/map lambdas that execute per-element. Pre-compute outside the stream.
+        - Flag LinkedList usage where random access or iteration is the only use case. Use ArrayList instead.
+        - Flag Map.containsValue() for membership checks on large maps. Suggest a pre-computed Set.
+
+        ITERATION PATTERNS:
+        - Use list.forEach() for simple side-effect iteration over a collection.
+        - Use stream() only when functional features (filter, map, collect, reduce, flatMap) are actually needed. Do not call .stream().forEach() as a replacement for plain forEach.
+        - Flag the pattern: if (!map.containsKey(key)) { map.put(key, new X()); } map.get(key).add(...). Replace with map.computeIfAbsent(key, k -> new X()).add(...).
+
+        DOCUMENTATION:
+        - Flag public classes and public/protected methods that lack Javadoc.
+        - Flag stale TODOs or FIXMEs with no associated Jira ticket reference (e.g., // TODO ADS-1234).
+        - Error messages and log statements must reference the correct component or method. Flag messages that reference a different class or method name.
+
+        CODE HYGIENE:
+        - Flag duplicated code blocks that appear in two or more places. Suggest extracting to a shared private method or a utility class.
+        - Flag unused imports, unused fields, unused local variables, and unused method parameters. Recommend removal.
+        - Flag usage of deprecated APIs. Suggest the modern replacement.
+        - Flag public methods that are only invoked from within the same class. Suggest making them private.
+        - When code is being removed in this PR, verify that all callers, all comments that reference it, and all related dead code paths are also removed or updated. Flag anything left behind.
+
+        SECURITY:
+        - Flag hardcoded credentials, API keys, secrets, or tokens.
+        - Flag Zip Slip vulnerabilities (archive extraction where entry paths are not validated before use).
+        - Flag values that could leak secrets into logs or stack traces.
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # AEROSPIKE MODEL FILES
+    # ─────────────────────────────────────────────────────────────────────────
+    - path: "**/model/**/*.java"
+      instructions: |
+        AEROSPIKE MODEL RULES (applies to classes annotated with @AerospikeModel):
+        - Any field that is of an enum type (including nested/inner enum fields) inside an Aerospike model class MUST be annotated with @Tag (io.protostuff.Tag) for Protostuff serialization.
+        - Flag any enum field in an Aerospike model that is missing a @Tag annotation.
+        - @Tag numbers must be unique within each class. Flag duplicate tag numbers.
+        - @Tag numbers must not be reused after a field is removed. Removing a field's @Tag number is a breaking change — flag it.
+        - Snake_case field names are acceptable in Aerospike model classes when they match the underlying database bin/field names. Do not flag these as naming violations.
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # TEST FILES
+    # ─────────────────────────────────────────────────────────────────────────
+    - path: "src/**/test/**/*.java"
+      instructions: |
+        UNIT TEST RULES:
+        - Test class must be named ClassNameTest (e.g., AdServingAPITest for AdServingAPI).
+        - Test methods must follow the pattern: methodName_shouldDoSomethingWhenCondition.
+        - Every new public method or significant code path added to source files in this PR must have at least one corresponding unit test. Flag missing coverage.
+        - Tests must use JUnit 4 (@Test, @Before, @BeforeClass) and Mockito for mocking.
+        - Flag tests with no assertions and no Mockito verify() calls — they do not prove correctness.
+        - Flag @Ignore annotations without a linked Jira ticket explaining when the test will be re-enabled.
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # POM FILE
+    # ─────────────────────────────────────────────────────────────────────────
+    - path: "pom.xml"
+      instructions: |
+        POM VERSION FORMAT:
+        - The <version> tag must follow the pattern: X.Y.Z.W-SNAPSHOT-ADS-NNNN
+          where X.Y.Z.W is a 4-segment number (e.g., 5.1.6.0), followed by -SNAPSHOT-, followed by a Jira ticket reference (e.g., ADS-1234).
+          Valid examples: 1.0.0.0-SNAPSHOT-ADS-123, 5.1.6.0-SNAPSHOT-ADS-4567.
+          Flag any version that does not match this exact format.
+
+        CORE VERSION ALIGNMENT:
+        - The <core.version> property must exactly match the <version> of AdServerCoreLib.
+        - If this PR modifies <version> or <core.version>, flag it and remind the developer that all three repositories (AdServer, AdServerCoreLib, AdServerBackgroundServices) must use the same version string in the same PR/release cycle.
+
+        DO NOT UPDATE COMMENTS:
+        - If any dependency or plugin block contains a comment with the text "DO NOT UPDATE", flag it prominently to the developer as a hard reminder not to change that version.
+
+        DEPENDENCY HYGIENE:
+        - Flag dependencies with hardcoded version numbers that should be extracted to a <properties> variable.
+        - Flag SNAPSHOT dependencies that are not this project's own version.
+        - Flag duplicate dependency entries.
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # PROPERTIES FILES
+    # ─────────────────────────────────────────────────────────────────────────
+    - path: "**/*.properties"
+      instructions: |
+        PROPERTIES VALIDATION:
+        - Every key defined in core.properties, hotdeploy_core.properties, or settings.properties must be referenced in at least one of:
+            1. net.nativo.core.constant.Properties (via @Property annotation or direct lookup)
+            2. net.nativo.background.constant.Properties (via @Property annotation or direct lookup)
+            3. A direct call to PropertiesUtil (net.nativo.commons.util.PropertiesUtil)
+        - Flag any property key that appears to be unused — not referenced in any Properties constants class or PropertiesUtil call. Ask the developer if it should be removed.
+        - Flag duplicate keys within the same properties file.
+        - Flag keys with empty values unless there is an explicit comment explaining why the value is intentionally empty.
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # DOCKERFILE
+    # ─────────────────────────────────────────────────────────────────────────
+    - path: "**/Dockerfile*"
+      instructions: |
+        DOCKER SECURITY:
+        - Flag any COPY or ADD instruction that could bake secrets, credentials, or private keys into an image layer.
+        - Flag running as root without an explicit justification comment.
+        - Flag hardcoded environment variables containing credentials, tokens, or passwords.
+        - Flag ADD with a remote URL where COPY would suffice (ADD with URLs bypasses layer caching and can be a security risk).
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # LABELS
+  # ─────────────────────────────────────────────────────────────────────────
+  labeling_instructions:
+    - label: "pom-change"
+      instructions: "Apply when any pom.xml file is modified."
+    - label: "needs-tests"
+      instructions: "Apply when new Java files are added under src/main but no corresponding test file is added or modified under src/test."
+    - label: "aerospike-model"
+      instructions: "Apply when any class annotated with @AerospikeModel is modified or added."
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # FINISHING TOUCHES
+  # ─────────────────────────────────────────────────────────────────────────
+  finishing_touches:
+    docstrings:
+      enabled: true
+    unit_tests:
+      enabled: true
+    simplify:
+      enabled: true
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # PRE-MERGE CHECKS
+  # ─────────────────────────────────────────────────────────────────────────
+  pre_merge_checks:
+    override_requested_reviewers_only: false
+    docstrings:
+      mode: "warning"
+      threshold: 80
+    title:
+      mode: "warning"
+      requirements: "PR title must include a Jira ticket reference (e.g., ADS-1234)."
+    description:
+      mode: "warning"
+    issue_assessment:
+      mode: "warning"
+    custom_checks:
+      - mode: "error"
+        name: "POM Version Format"
+        instructions: "Verify the pom.xml <version> matches X.Y.Z.W-SNAPSHOT-ADS-NNNN. Fail if the version does not follow this exact pattern."
+      - mode: "error"
+        name: "Core Version Alignment"
+        instructions: "Verify that <core.version> in pom.xml matches the <version> value. Both must be identical. Fail if they differ."
+      - mode: "warning"
+        name: "Unit Test Coverage"
+        instructions: "Every new or modified public method in src/main must have a corresponding test in src/test. Warn if new code paths lack unit tests."
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # TOOLS
+  # ─────────────────────────────────────────────────────────────────────────
+  tools:
+    pmd:
+      enabled: true
+      config_file: ".ruleset"
+    gitleaks:
+      enabled: true
+    trufflehog:
+      enabled: true
+    semgrep:
+      enabled: true
+    yamllint:
+      enabled: true
+    hadolint:
+      enabled: true
+    actionlint:
+      enabled: true
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  opt_out: false
+  web_search:
+    enabled: true
+  code_guidelines:
+    enabled: true
+  learnings:
+    scope: "auto"
+  issues:
+    scope: "auto"
+  pull_requests:
+    scope: "auto"
+  linked_repositories:
+    - repository: "NativoPlatform/AdServerCoreLib"
+      instructions: "Shared core library that AdServer depends on. The <core.version> in AdServer's pom.xml must always match AdServerCoreLib's <version>."
+
+code_generation:
+  docstrings:
+    language: "en-US"
+    path_instructions:
+      - path: "**/*.java"
+        instructions: "Generate Javadoc following the project style. Use {@code value} for inline code. Document all parameters, return values, and thrown exceptions."
+  unit_tests:
+    path_instructions:
+      - path: "**/*.java"
+        instructions: "Generate JUnit 4 tests using Mockito for mocking. Follow the naming convention methodName_shouldDoSomethingWhenCondition. Extend AbstractMockTest or AbstractBasicUnitTest where applicable. Place tests under the matching unit/ package."

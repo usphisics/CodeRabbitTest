@@ -13,6 +13,25 @@ spring:
 ortb:
   auction:
     default-currency: USD
-    timeout-ms: 100  # Max auction duration in ms
+    timeout-ms: 100  # Max overall auction duration in ms
   logging:
     log-no-bid: true
+
+  # External DSP integrations — each DSP receives the full OpenRTB BidRequest
+  # and must respond with an OpenRTB BidResponse within timeout-ms.
+  dsps:
+    - id: dsp-alpha
+      name: "DSP Alpha"
+      endpoint: "http://localhost:9901/bid"
+      timeout-ms: 80
+      seat: "seat-alpha"
+    - id: dsp-beta
+      name: "DSP Beta"
+      endpoint: "http://localhost:9902/bid"
+      timeout-ms: 80
+      seat: "seat-beta"
+    - id: dsp-gamma
+      name: "DSP Gamma"
+      endpoint: "http://localhost:9903/bid"
+      timeout-ms: 80
+      seat: "seat-gamma"
